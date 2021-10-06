@@ -1396,14 +1396,14 @@ class BlackTestCase(BlackBaseTestCase):
         )
         expected = 'def foo():\n    """Testing\n    Testing"""\n    print "Foo"\n'
 
-        result = CliRunner().invoke(
+        result = BlackRunner().invoke(
             black.main,
             ["-", "-q", "--target-version=py27"],
             input=BytesIO(source),
         )
 
         self.assertEqual(result.exit_code, 0)
-        actual = result.output
+        actual = result.stdout
         self.assertFormatEqual(actual, expected)
 
     @staticmethod
@@ -2008,6 +2008,24 @@ class TestFileCollection:
             force_exclude=r"/exclude/|a\.py",
             stdin_filename=stdin_filename,
         )
+
+
+@pytest.mark.parametrize("explicit", [True, False], ids=["explicit", "autodetection"])
+def test_python_two_deprecation_with_target_version(explicit: bool) -> None:
+    args = [
+        "--config",
+        str(THIS_DIR / "empty.toml"),
+        str(DATA_DIR / "python2.py"),
+        "--check",
+    ]
+    if explicit:
+        args.append("--target-version=py27")
+    with cache_dir():
+        result = BlackRunner().invoke(black.main, args)
+    assert (
+        "DEPRECATION: Python 2 support will be removed after December 1st, 2021"
+        in result.stderr
+    )
 
 
 with open(black.__file__, "r", encoding="utf-8") as _bf:
